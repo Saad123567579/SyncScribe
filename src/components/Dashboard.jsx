@@ -12,7 +12,7 @@ const Dashboard = () => {
     };
 
     document.addEventListener('click', (event) => {
-        if (event.target.getAttribute('id') == "modal") { closeModal() }
+        if (event.target.getAttribute('id') === "modal") { closeModal() }
     })
     return (
         <div className=' w-full h-screen'>
@@ -84,7 +84,7 @@ const Dashboard = () => {
                 </div>
             </div>
             {isModalOpen && (
-                <div className='fixed inset-0 flex items-center justify-center bg-black bg-opacity-50' id="modal">
+                <div className='fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 w-full h-full' id="modal">
                     <div className='bg-white rounded-lg flex-col m-0 w-1/5 p-4'>
                         <button onClick={() => closeModal()}>
                             <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">

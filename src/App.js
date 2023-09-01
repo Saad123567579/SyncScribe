@@ -3,13 +3,14 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import Signin from "./components/Signin";
 import Notfound from "./components/Notfound";
 import Dashboard from "./components/Dashboard";
+import Document from "./components/Document";
 import { useDispatch,useSelector } from "react-redux";
 import { useEffect } from "react";
 import {setAllUser } from "./redux/authSlice";
 import { query, getDocs } from 'firebase/firestore'; // Make sure to import query, where, getDocs, and addDoc
 import { userRef } from './firebase';
-
 function App() {
+  
   const dispatch = useDispatch();
   const user = useSelector((state)=>state?.auth?.user);
     
@@ -33,6 +34,7 @@ function App() {
             return User.uid != user?.uid;
           })
           await dispatch (setAllUser(userData));
+          
         } catch (error) {
           console.error("Error fetching data:", error);
         }
@@ -46,7 +48,7 @@ function App() {
     <Routes>
       <Route path="/" element={<Signin />} />
       <Route path="/dashboard" element={<Dashboard />} />
-  
+      <Route path="/document/:id" element={<Document />} />
       
 
 

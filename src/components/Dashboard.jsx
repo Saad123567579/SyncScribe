@@ -1,26 +1,41 @@
 import React, { useState } from 'react'
 import Navbar from './Navbar'
 import { useEffect } from "react";
-import { useDispatch ,useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { setUser } from '../redux/authSlice';
 import { useNavigate } from 'react-router';
+import Select from 'react-select'
+import { documentRef } from '../firebase';
+import { addDoc } from 'firebase/firestore'; 
 const Dashboard = () => {
-    const allUsers = useSelector((state)=>state?.auth?.allUsers);
     const dispatch = useDispatch();
     const navigate = useNavigate();
     useEffect(() => {
-        const doTask = async() => {
+        const doTask = async () => {
             let user = JSON.parse(localStorage.getItem("userObject"));
-        // if(!user) window.location.href = "/";
-        if(!user) navigate("/");
-        await dispatch(setUser(user));
+            // if(!user) window.location.href = "/";
+            if (!user) navigate("/");
+            await dispatch(setUser(user));
         }
         return () => doTask();
 
-        
-    
-    }, [dispatch,navigate])
+
+
+    }, [dispatch, navigate])
+
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [selectedOptions, setSelectedOptions] = useState([]);
+    const handleSelectChange = (selectedValues) => {
+        setSelectedOptions(selectedValues);
+    };
+    const allUsers = useSelector((state) => state?.auth?.allUsers);
+    const user = useSelector((state)=> state?.auth?.user)
+    let options = [];
+    allUsers?.map((item) => {
+        let obj = { ...item, value: item.name, label: item.name };
+        options.push(obj);
+
+    })
 
     const openModal = () => {
         setIsModalOpen(true);
@@ -33,8 +48,33 @@ const Dashboard = () => {
     document.addEventListener('click', (event) => {
         if (event.target.getAttribute('id') === "modal") { closeModal() }
     })
-    const handleName = async(text) => {
-            
+    function generateUniqueId() {
+        const timestamp = Date.now().toString();
+        const randomDigits = Math.floor(Math.random() * 100000).toString().padStart(5, '0'); // Generate 5-digit random number
+        const uniqueId = timestamp + randomDigits;
+      
+        return uniqueId.substring(0, 10); // Take the first 10 digits
+      }
+    
+    const handleName = async (text) => {
+        let obj = {};
+        obj.name = text;
+        let al = selectedOptions.map((option) => option.value);
+        obj.allowedUsers = al;
+        obj.host = user;
+        obj.uid = generateUniqueId();
+
+        if(obj.name.length>3 && obj.allowedUsers.length>0){
+            await addDoc(documentRef, obj);
+            let url = `${window.location.origin}/document/${obj.uid}` ;
+            window.location.href = url;
+
+
+        }
+        else {
+            console.log("false");
+        }
+        
     }
 
     return (
@@ -76,9 +116,18 @@ const Dashboard = () => {
                             <label htmlFor="name" className='text-xl font-semibold'>Document Name</label>
                             <input type="text" id="name" placeholder='Name your document' className='p-2 rounded-xl border-2 border-black mt-2 w-full' />
                         </div>
-                        <div>
-                            <label htmlFor="users" className='text-xl font-semibold'>Name your document</label>
-                            <input type="text" id="users" placeholder='Name your document' className='p-2 rounded-xl border-2 border-black mt-2 w-full' />
+                        <div className='mt-2 mb-2'>
+                            <Select
+                               
+                                isMulti
+                                name=""Users
+                                options={options}
+                                id="select"
+                                value={selectedOptions} 
+                                onChange={handleSelectChange}
+                                className="basic-multi-select"
+                                classNamePrefix="select"
+                            />
                         </div>
                         <button className='rounded-lg p-2 bg-blue-600 hover:bg-blue-500 mt-2' onClick={() => handleName(document.getElementById("name").value)}>
                             Create

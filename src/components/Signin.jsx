@@ -2,43 +2,62 @@ import "../index.css";
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { firebaseAuth, userRef } from '../firebase';
 import { useState } from "react";
-import {toast} from "react-toastify"
+import { toast } from "react-toastify"
 import { query, where, getDocs, addDoc } from 'firebase/firestore';
+import { useEffect } from "react";
+import { useDispatch } from "react-redux";
+import { setUser } from "../redux/authSlice";
+import { useNavigate } from "react-router";
 function Signin() {
-    const [status,setStatus] = useState(false);
-   
-    const handleAuth = async() => {
-        setStatus(true);
-        const provider = new GoogleAuthProvider();
-        try {
-          const { user } = await signInWithPopup(firebaseAuth, provider);
-          const obj = { "name": user.displayName, "email": user.email, "image": user.photoURL, "uid": user.uid };
-          const firestoreQuery = query(userRef, where("uid", "==", user.uid));
-          const fetchedUsers = await getDocs(firestoreQuery);
-          if (fetchedUsers.docs.length === 0) {
-            await addDoc(userRef, obj);
-            console.log("User added");
-            localStorage.setItem('userObject', JSON.stringify(obj));
-
-            toast.success("Congratulations on signing up");
-            setTimeout(() => {
-                window.location.href="/dashboard";
-            }, 1000);
-            
-            
-          } else {
-            localStorage.setItem('userObject', JSON.stringify(obj));
-
-            toast.success("Welcome back");
-            setTimeout(() => {
-                window.location.href="/dashboard";
-            }, 1000);
-
-          }
-        } catch (e) {
-          console.log(e);
-        }
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  useEffect(() => {
+    const doTask = async() => {
+      if(localStorage.getItem("userObject")){
+        let user = JSON.parse(localStorage.getItem("userObject"));
+        await dispatch(setUser(user));
+        // window.location.href = "/dashboard";
+        navigate("/dashboard");
+      }
     }
+    return () => {
+      doTask()
+    }
+}, [dispatch,navigate])
+  const [status, setStatus] = useState(false);
+
+  const handleAuth = async () => {
+    setStatus(true);
+    const provider = new GoogleAuthProvider();
+    try {
+      const { user } = await signInWithPopup(firebaseAuth, provider);
+      const obj = { "name": user.displayName, "email": user.email, "image": user.photoURL, "uid": user.uid };
+      const firestoreQuery = query(userRef, where("uid", "==", user.uid));
+      const fetchedUsers = await getDocs(firestoreQuery);
+      if (fetchedUsers.docs.length === 0) {
+        await addDoc(userRef, obj);
+        console.log("User added");
+        localStorage.setItem('userObject', JSON.stringify(obj));
+
+        toast.success("Congratulations on signing up");
+        setTimeout(() => {
+          window.location.href = "/dashboard";
+        }, 1000);
+
+
+      } else {
+        localStorage.setItem('userObject', JSON.stringify(obj));
+
+        toast.success("Welcome back");
+        setTimeout(() => {
+          window.location.href = "/dashboard";
+        }, 1000);
+
+      }
+    } catch (e) {
+      console.log(e);
+    }
+  }
   return (
     <div className="w-full h-screen bg-slate-200 flex flex-col items-center ">
       <img
@@ -47,8 +66,8 @@ function Signin() {
         src="https://mailmeteor.com/logos/assets/PNG/Google_Docs_Logo_512px.png"
       />
 
-      <button disabled={status} className={`p-4 rounded-lg ${status?("cursor-wait"):("cursor-pointer")}  flex bg-blue-500 hover:bg-blue-600  mt-4`}>
-       <h1 className="font-bold mr-1 text-white" onClick={handleAuth}>Sign in</h1>
+      <button disabled={status} className={`p-4 rounded-lg ${status ? ("cursor-wait") : ("cursor-pointer")}  flex bg-blue-500 hover:bg-blue-600  mt-4`}>
+        <h1 className="font-bold mr-1 text-white" onClick={handleAuth}>Sign in</h1>
         <svg
           className="w-6 h-6 text-white dark:text-white"
           aria-hidden="true"

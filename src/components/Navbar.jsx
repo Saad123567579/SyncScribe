@@ -1,6 +1,8 @@
 import React from 'react';
+import {useSelector} from "react-redux";
 
 const Navbar = () => {
+    const user = useSelector((state)=>state?.auth?.user);
     return (
         <div className='flex flex-wrap items-center justify-between w-full h-16 p-4  bg-gray-100 dark:bg-gray-800'>
             <div className='flex items-center'>
@@ -17,7 +19,7 @@ const Navbar = () => {
                 <h1 className='font-bold text-4xl mb-2'>Mydoc</h1>
             </div>
             <div className='flex items-center '>
-                <img className='rounded-full w-12 h-12' alt="img" src="https://img.freepik.com/free-photo/young-bearded-man-with-striped-shirt_273609-5677.jpg" />
+                <img className='rounded-full w-12 h-12' alt="img" src={user?.image} />
             </div>
             
            

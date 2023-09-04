@@ -2,19 +2,38 @@ import React, { useState } from 'react'
 import Navbar from './Navbar'
 import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { setUser } from '../redux/authSlice';
+import { setUser, setMyDocs } from '../redux/authSlice';
 import { useNavigate } from 'react-router';
 import Select from 'react-select'
 import { documentRef } from '../firebase';
-import { addDoc } from 'firebase/firestore'; 
+import { query, where, getDocs, addDoc } from 'firebase/firestore';
+
 const Dashboard = () => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
+    const allDocs = useSelector((state) => state?.auth?.myDocs);
     useEffect(() => {
         const doTask = async () => {
             let user = JSON.parse(localStorage.getItem("userObject"));
             // if(!user) window.location.href = "/";
             if (!user) navigate("/");
+            const firestoreQuery1 = query(documentRef, where("host.name", "==", user.name));
+            const fetchedUsers = await getDocs(firestoreQuery1);
+            const allDocs = [];
+            fetchedUsers.forEach((doc) => {
+                allDocs.push(doc.data());
+            });
+
+            const firestoreQuery2 = query(documentRef, where("allowedUsers", "array-contains", user.name));
+            const fetchedUsersAgain = await getDocs(firestoreQuery2);
+            fetchedUsersAgain.forEach((doc) => {
+                let d = doc.data();
+                let by = d.name;
+                d.sharedBy = by;
+                allDocs.push(d);
+            });
+            // console.log('the docs are',allDocs);
+            await dispatch(setMyDocs(allDocs));
             await dispatch(setUser(user));
         }
         return () => doTask();
@@ -29,7 +48,7 @@ const Dashboard = () => {
         setSelectedOptions(selectedValues);
     };
     const allUsers = useSelector((state) => state?.auth?.allUsers);
-    const user = useSelector((state)=> state?.auth?.user)
+    const user = useSelector((state) => state?.auth?.user)
     let options = [];
     allUsers?.map((item) => {
         let obj = { ...item, value: item.name, label: item.name };
@@ -52,10 +71,10 @@ const Dashboard = () => {
         const timestamp = Date.now().toString();
         const randomDigits = Math.floor(Math.random() * 100000).toString().padStart(5, '0'); // Generate 5-digit random number
         const uniqueId = timestamp + randomDigits;
-      
+
         return uniqueId.substring(0, 10); // Take the first 10 digits
-      }
-    
+    }
+
     const handleName = async (text) => {
         let obj = {};
         obj.name = text;
@@ -63,10 +82,11 @@ const Dashboard = () => {
         obj.allowedUsers = al;
         obj.host = user;
         obj.uid = generateUniqueId();
+        obj.createdAt = new Date();
 
-        if(obj.name.length>3 && obj.allowedUsers.length>0){
+        if (obj.name.length > 3 && obj.allowedUsers.length > 0) {
             await addDoc(documentRef, obj);
-            let url = `${window.location.origin}/document/${obj.uid}` ;
+            let url = `${window.location.origin}/document/${obj.uid}`;
             window.location.href = url;
 
 
@@ -74,11 +94,12 @@ const Dashboard = () => {
         else {
             console.log("false");
         }
-        
+
     }
+    
 
     return (
-        <div className='w-full h-screen'>
+        <div className='w-full h-screen bg-slate-100'>
             <Navbar />
             <div className='w-full h-screen bg-slate-100'>
                 <div className='w-3/4 h-3/5 md:h-96 md:w-full flex justify-evenly'>
@@ -94,21 +115,32 @@ const Dashboard = () => {
                     </div>
                 </div>
                 <h1 className='text-4xl font-bold mt-4 flex justify-center'>My Docs</h1>
-                <div className="w-full h-auto md:h-96 flex-col items-center justify-start mt-4 flex bg-slate-100">
-                    <div className='w-full md:w-2/4 flex mt-2 mb-2 cursor-pointer hover:bg-slate-200 rounded-lg p-2'>
-                        <div className='w-2/4 flex justify-center'>
-                            <img className='h-6 w-6 ' alt="img" src="https://mailmeteor.com/logos/assets/PNG/Google_Docs_Logo_512px.png" />
-                            <h1 className='text-lg font-semibold ml-2'>Doc name</h1>
-                        </div>
-                        <div className='w-2/4 flex justify-center'>12/2/2020</div>
-                    </div>
+                <div className="w-full h-auto md:h-96 flex-col items-center justify-start mt-4 flex bg-slate-100 overflow-y-auto">
+                    {
+                        allDocs?.length !== 0 ? (
+                            allDocs?.map((data) => (
+                                <div className='w-1/2 md:w-2/4 flex mt-2 mb-2 cursor-pointer hover:bg-slate-200 rounded-lg p-2 ' key={data.uid} onClick={()=>navigate(`/document/${data?.uid}`)} >
+                                    <div className='w-2/4 flex justify-start items-center '>
+                                        <img className='h-6 w-6' alt="img" src="https://mailmeteor.com/logos/assets/PNG/Google_Docs_Logo_512px.png" />
+                                        <div className='text-lg font-semibold ml-2 overflow-hidden whitespace-nowrap overflow-ellipsis' style={{ maxWidth: '80%' }}>
+                                            {data?.name}
+                                        </div>
+                                    </div>
+                                    <div className='w-2/4 flex justify-end'>12/2/2020</div>
+                                </div>
+                            ))
+                        ) : (
+                            <div className='flex font-bold text-4xl'>No Docs Found</div>
+                        )
+                    }
+
                 </div>
             </div>
             {isModalOpen && (
                 <div className='fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 w-full h-full' id="modal">
                     <div className='bg-white rounded-lg flex-col m-0 w-4/5 md:w-1/5 p-4'>
                         <button onClick={() => closeModal()}>
-                            <svg className="w-6 h-6 text-gray-800 dark:text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
+                            <svg className="w-6 h-6 text-gray-800 dark:text-white" xmlns="http://www.w3.org/2000/svg" fill="non=e" viewBox="0 0 14 14">
                                 <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6" />
                             </svg>
                         </button>
@@ -118,12 +150,12 @@ const Dashboard = () => {
                         </div>
                         <div className='mt-2 mb-2'>
                             <Select
-                               
+
                                 isMulti
-                                name=""Users
+                                name="" Users
                                 options={options}
                                 id="select"
-                                value={selectedOptions} 
+                                value={selectedOptions}
                                 onChange={handleSelectChange}
                                 className="basic-multi-select"
                                 classNamePrefix="select"

@@ -4,7 +4,10 @@ import {  createSlice } from '@reduxjs/toolkit';
 const initialState = {
     user:null,
     allUsers:null,
-    myDocs:null
+    myDocs:null,
+    mySocket:null,
+    currentDoc:null,
+
 
 };
 
@@ -27,7 +30,19 @@ export const userSlice = createSlice({
         },
         setMyDocs:(state,action)=> {
             state.myDocs = action.payload
+        },
+        setSocket:(state,action)=> {
+            state.mySocket = action.payload
+        },
+        setCurrentDoc:(state,action)=> {
+            state.currentDoc = action.payload
+        },
+        delCurrentDoc:(state,action)=> {
+            state.currentDoc = null
         }
+
+
+
         
           
     },
@@ -37,5 +52,5 @@ export const userSlice = createSlice({
 
 });
 
-export const { increment, setUser,setAllUser, setMyDocs } = userSlice.actions;
+export const { increment, setUser,setAllUser, setMyDocs, setSocket ,setCurrentDoc,delCurrentDoc} = userSlice.actions;
 export default userSlice.reducer;

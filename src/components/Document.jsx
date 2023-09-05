@@ -1,18 +1,52 @@
-import React,{useEffect,useRef} from 'react'
+import React,{useEffect,useRef,useState} from 'react'
 import { useParams } from 'react-router'
-import { useDispatch } from 'react-redux';
+import { useDispatch , useSelector } from 'react-redux';
 import { useNavigate } from 'react-router';
-import { setUser, setMyDocs } from '../redux/authSlice';
+import { setUser, setMyDocs, setSocket,delCurrentDoc, setCurrentDoc } from '../redux/authSlice';
 import "quill/dist/quill.snow.css";
 import Quill from 'quill';
 import { documentRef } from '../firebase';
 import { query, where, getDocs } from 'firebase/firestore';
+import io from 'socket.io-client';
 import Navbar from './Navbar';
 const Document = () => {
+    const socket = useRef();
     const { id } = useParams();
     const dispatch = useDispatch();
     const navigate = useNavigate();
+    const [quill,setQuill] = useState();
+    const user = useSelector((state)=>state?.auth?.user);
     const wrapperRef = useRef();
+    const allUsers = useSelector((state)=>state?.auth?.allUsers);
+    useEffect(() => {
+      const getData = async() => {
+        const firestoreQuery2 = query(documentRef, where("uid", "==",id));
+        const fetchedDocs = await getDocs(firestoreQuery2);
+        const allDocs = [];
+        fetchedDocs.forEach((doc) => {
+              allDocs.push(doc.data());
+          });
+          if(allDocs.length==0) navigate("/dashboard");
+          
+          let currentDocs = allDocs[0];
+          let obj = {};
+          let arr = [...currentDocs?.allowedUsers];
+          arr.push(currentDocs?.host?.name);
+          obj.users = arr;
+          obj.uid = currentDocs?.uid;
+          await dispatch(setCurrentDoc(obj));
+         
+          
+      }
+     getData();
+
+     return () => {
+      const delDoc = async() => {
+        await dispatch(delCurrentDoc());
+      }
+      delDoc();
+     }
+    }, [])
     
     
     useEffect(() => {
@@ -62,11 +96,15 @@ const Document = () => {
     
       if(wrapperRef.current.children.length==0){
         wrapperRef.current.append(editor);
-        new Quill(editor, {
+        var q = new Quill(editor, {
           theme: "snow",
           modules: { toolbar: TOOLBAR_OPTIONS },
         })
+        setQuill(q);
+       
+
       }
+      
    
 
     
@@ -74,6 +112,61 @@ const Document = () => {
       wrapperRef.innerHTML = "";
     }
   }, [])
+
+  useEffect(() => {
+    if(socket?.current == null && quill == null && !allUsers) return;
+    const handleTextChange = (delta,oldDelta,source)=> {
+      if(source !== 'user' ) return;
+      console.log(delta);
+      console.log(source)
+      console.log("changes sent")
+      socket.current.emit('send-changes',delta,allUsers);
+    }
+    quill?.on('text-change',handleTextChange)
+  
+    return () => {
+      quill?.off('text-change',handleTextChange)
+    }
+  }, [quill,socket,allUsers])
+
+  useEffect(() => {
+    
+    const handleReceiveChanges = (delta)=> {
+      console.log("changes receive")
+      quill?.updateContents(delta);
+    }
+    socket?.current?.on('receive-changes',handleReceiveChanges)
+  
+    return () => {
+      socket?.current?.off('receive-changes',handleReceiveChanges)
+
+    }
+  }, [quill,socket,allUsers])
+
+ 
+  
+
+  useEffect(() => {
+    if (!user) return;
+    const fdata = async () => {
+      socket.current = io('http://localhost:3001');
+      await dispatch(setSocket(socket?.current?.id));
+      socket.current.emit("adduser", user?.uid);
+      return () => {
+        socket.current.emit("disconnect");
+      }
+
+    }
+    fdata();
+  }, [user])
+
+ 
+
+  useEffect(() => {
+    console.log(quill)
+  }, [quill])
+  
+  
   
 
   return (

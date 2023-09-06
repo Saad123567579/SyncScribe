@@ -39,6 +39,12 @@ export const userSlice = createSlice({
         },
         delCurrentDoc:(state,action)=> {
             state.currentDoc = null
+        },
+        updateDocData:(state,action)=> {
+            if(state.currentDoc){
+                state.currentDoc.data = action.payload;
+            }
+           
         }
 
 
@@ -52,5 +58,5 @@ export const userSlice = createSlice({
 
 });
 
-export const { increment, setUser,setAllUser, setMyDocs, setSocket ,setCurrentDoc,delCurrentDoc} = userSlice.actions;
+export const { increment, setUser,setAllUser, setMyDocs, setSocket ,setCurrentDoc,delCurrentDoc,updateDocData} = userSlice.actions;
 export default userSlice.reducer;

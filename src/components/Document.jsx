@@ -2,11 +2,11 @@ import React,{useEffect,useRef,useState} from 'react'
 import { useParams } from 'react-router'
 import { useDispatch , useSelector } from 'react-redux';
 import { useNavigate } from 'react-router';
-import { setUser, setMyDocs, setSocket,delCurrentDoc, setCurrentDoc } from '../redux/authSlice';
+import { setUser, setMyDocs, setSocket,delCurrentDoc, setCurrentDoc,updateDocData } from '../redux/authSlice';
 import "quill/dist/quill.snow.css";
 import Quill from 'quill';
 import { documentRef } from '../firebase';
-import { query, where, getDocs } from 'firebase/firestore';
+import { query, where, getDocs, updateDoc } from 'firebase/firestore';
 import io from 'socket.io-client';
 import Navbar from './Navbar';
 const Document = () => {
@@ -18,6 +18,7 @@ const Document = () => {
     const user = useSelector((state)=>state?.auth?.user);
     const wrapperRef = useRef();
     const allUsers = useSelector((state)=>state?.auth?.allUsers);
+    const currentDoc = useSelector((state)=>state?.auth?.currentDoc);
     useEffect(() => {
       if(!user) return;
       const getData = async() => {
@@ -35,6 +36,7 @@ const Document = () => {
           arr.push(currentDocs?.host?.name);
           obj.users = arr;
           obj.uid = currentDocs?.uid;
+          obj.data = currentDocs?.data;
           await dispatch(setCurrentDoc(obj));
           
           
@@ -44,8 +46,6 @@ const Document = () => {
      return () => {
       const delDoc = async() => {
         await dispatch(delCurrentDoc());
-        
-       
       }
       delDoc();
      }
@@ -95,44 +95,78 @@ const Document = () => {
 
   useEffect(() => {
     const editor = document.createElement('div');
-    
-      if(wrapperRef.current.children.length==0){
-        wrapperRef.current.append(editor);
-        var q = new Quill(editor, {
-          theme: "snow",
-          modules: { toolbar: TOOLBAR_OPTIONS },
-        })
-        setQuill(q);
-       
-
-      }
+  
+    if (wrapperRef.current.children.length === 0) {
+      wrapperRef.current.append(editor);
+      const q = new Quill(editor, {
+        theme: "snow",
+        modules: {
+          toolbar: TOOLBAR_OPTIONS
+        },
+        formats: ["align", "bold", "italic", "underline", "list", "color", "background", "script", "blockquote", "code-block", "clean"],
+        direction: 'ltr', // Add this line to set the text direction to LTR
+      });
+      setQuill(q);
+    }
+  
     return () => {
       wrapperRef.innerHTML = "";
-    }
-  }, [])
+    };
+  }, []);
+  
+
+  useEffect(() => {
+    if(!quill && !currentDoc) return; 
+    quill?.setContents(currentDoc?.data);
+    // quill?.setContents(currentDoc?.data, 'user'); // Make sure the content has the 'user' as the source
+
+    console.log("setting content to",currentDoc?.data)
+  }, [quill,currentDoc])
+  
 
   useEffect(() => {
     if(socket?.current == null && quill == null && !allUsers) return;
-    const handleTextChange = (delta,oldDelta,source)=> {
+    const handleTextChange = async(delta,oldDelta,source)=> {
+      let obj = { ...quill?.getContents()};
       if(source !== 'user' ) return;
       console.log(delta);
-      console.log(source)
+      console.log(source);
+      await dispatch(updateDocData(obj));
+        
+      const firestoreQuery3 = query(documentRef, where("uid", "==",currentDoc?.uid));
+      const querySnapshot  = await getDocs(firestoreQuery3);
+    
+      if (!querySnapshot.empty) {
+        const docRef = querySnapshot.docs[0].ref;
+        
+        // Update the 'data' field in the document with the 'delta' from Quill
+        await updateDoc(docRef, {
+          data: obj, // Assuming 'data' is the field you want to update
+        });
+  
+        console.log("Document data updated with delta:", obj);
+        console.log("Changes sent to Firestore");
+      }
+      //update data field to delta now 
+      console.log("delta",obj);
       console.log("changes sent")
-      socket.current.emit('send-changes',delta,user?.uid,id);
+      socket.current.emit('send-changes',obj,user?.uid,id);
     }
     quill?.on('text-change',handleTextChange)
   
     return () => {
       quill?.off('text-change',handleTextChange)
     }
-  }, [quill,socket,allUsers])
+  }, [quill,socket,allUsers,dispatch])
 
   useEffect(() => {
     
     const handleReceiveChanges = (delta,roomId)=> {
       if(roomId === id){
+       var d = quill.getContents();
+       console.log("The content is",d);
         console.log("changes receive")
-        quill?.updateContents(delta);
+        quill?.setContents(delta);
       }
      
     }

@@ -83,6 +83,7 @@ const Dashboard = () => {
         obj.host = user;
         obj.uid = generateUniqueId();
         obj.createdAt = new Date();
+        obj.data = {};
 
         if (obj.name.length > 3 && obj.allowedUsers.length > 0) {
             await addDoc(documentRef, obj);

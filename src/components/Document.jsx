@@ -19,6 +19,7 @@ const Document = () => {
     const wrapperRef = useRef();
     const allUsers = useSelector((state)=>state?.auth?.allUsers);
     useEffect(() => {
+      if(!user) return;
       const getData = async() => {
         const firestoreQuery2 = query(documentRef, where("uid", "==",id));
         const fetchedDocs = await getDocs(firestoreQuery2);
@@ -35,7 +36,7 @@ const Document = () => {
           obj.users = arr;
           obj.uid = currentDocs?.uid;
           await dispatch(setCurrentDoc(obj));
-         
+          
           
       }
      getData();
@@ -43,11 +44,12 @@ const Document = () => {
      return () => {
       const delDoc = async() => {
         await dispatch(delCurrentDoc());
+        
+       
       }
       delDoc();
      }
-    }, [])
-    
+    }, [user,dispatch])
     
     useEffect(() => {
       const doTask = async () => {
@@ -104,10 +106,6 @@ const Document = () => {
        
 
       }
-      
-   
-
-    
     return () => {
       wrapperRef.innerHTML = "";
     }
@@ -120,7 +118,7 @@ const Document = () => {
       console.log(delta);
       console.log(source)
       console.log("changes sent")
-      socket.current.emit('send-changes',delta,allUsers);
+      socket.current.emit('send-changes',delta,user?.uid,id);
     }
     quill?.on('text-change',handleTextChange)
   
@@ -131,9 +129,12 @@ const Document = () => {
 
   useEffect(() => {
     
-    const handleReceiveChanges = (delta)=> {
-      console.log("changes receive")
-      quill?.updateContents(delta);
+    const handleReceiveChanges = (delta,roomId)=> {
+      if(roomId === id){
+        console.log("changes receive")
+        quill?.updateContents(delta);
+      }
+     
     }
     socket?.current?.on('receive-changes',handleReceiveChanges)
   
@@ -141,10 +142,7 @@ const Document = () => {
       socket?.current?.off('receive-changes',handleReceiveChanges)
 
     }
-  }, [quill,socket,allUsers])
-
- 
-  
+  }, [quill,socket,allUsers,id])
 
   useEffect(() => {
     if (!user) return;
@@ -152,13 +150,21 @@ const Document = () => {
       socket.current = io('http://localhost:3001');
       await dispatch(setSocket(socket?.current?.id));
       socket.current.emit("adduser", user?.uid);
-      return () => {
-        socket.current.emit("disconnect");
-      }
+      console.log("new user connected")
+      socket?.current?.emit('join-room', id);
+      console.log("joining room")
+     
 
     }
     fdata();
-  }, [user])
+    return () => {
+      console.log("user disconnected")
+      socket.current.emit("dis");
+      socket?.current?.emit('leave-room', id);
+        console.log("leaving room")
+    }
+   
+  }, [user,dispatch])
 
  
 

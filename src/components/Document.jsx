@@ -205,9 +205,6 @@ const Document = () => {
   useEffect(() => {
     console.log(quill)
   }, [quill])
-  
-  
-  
 
   return (
     <>

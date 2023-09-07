@@ -121,6 +121,8 @@ const Document = () => {
     // quill?.setContents(currentDoc?.data, 'user'); // Make sure the content has the 'user' as the source
 
     console.log("setting content to",currentDoc?.data)
+
+    
   }, [quill,currentDoc])
   
 
@@ -131,7 +133,8 @@ const Document = () => {
       if(source !== 'user' ) return;
       console.log(delta);
       console.log(source);
-      await dispatch(updateDocData(obj));
+      // await dispatch(updateDocData(obj)); // this is one of the very important errors i solved myself after about 3 days 
+      
         
       const firestoreQuery3 = query(documentRef, where("uid", "==",currentDoc?.uid));
       const querySnapshot  = await getDocs(firestoreQuery3);
@@ -150,7 +153,7 @@ const Document = () => {
       //update data field to delta now 
       console.log("delta",obj);
       console.log("changes sent")
-      socket.current.emit('send-changes',obj,user?.uid,id);
+      socket.current.emit('send-changes',delta,user?.uid,id);
     }
     quill?.on('text-change',handleTextChange)
   
@@ -166,7 +169,7 @@ const Document = () => {
        var d = quill.getContents();
        console.log("The content is",d);
         console.log("changes receive")
-        quill?.setContents(delta);
+        quill?.updateContents(delta);
       }
      
     }
@@ -208,13 +211,18 @@ const Document = () => {
 
   return (
     <>
+   
     <Navbar />
     <div className="w-full h-full" id="container" ref={wrapperRef}>
      
      </div>
-    </>
+     </>
+   
     
   )
 }
 
 export default Document
+
+
+

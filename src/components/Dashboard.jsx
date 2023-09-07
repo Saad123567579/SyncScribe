@@ -7,8 +7,10 @@ import { useNavigate } from 'react-router';
 import Select from 'react-select'
 import { documentRef } from '../firebase';
 import { query, where, getDocs, addDoc } from 'firebase/firestore';
+import {toast} from "react-toastify";
 
 const Dashboard = () => {
+    const [status,setStatus] = useState(false);
     const dispatch = useDispatch();
     const navigate = useNavigate();
     const allDocs = useSelector((state) => state?.auth?.myDocs);
@@ -74,25 +76,38 @@ const Dashboard = () => {
 
         return uniqueId.substring(0, 10); // Take the first 10 digits
     }
+    function getCurrentDateAsString() {
+        const currentDate = new Date();
+        const year = currentDate.getFullYear();
+        const month = String(currentDate.getMonth() + 1).padStart(2, '0'); // Month is 0-based
+        const day = String(currentDate.getDate()).padStart(2, '0');
+        
+        return `${year}/${month}/${day}`;
+      }
 
     const handleName = async (text) => {
+        setStatus(true);
         let obj = {};
         obj.name = text;
         let al = selectedOptions.map((option) => option.value);
         obj.allowedUsers = al;
         obj.host = user;
         obj.uid = generateUniqueId();
-        obj.createdAt = new Date();
+        obj.createdAt = getCurrentDateAsString();
         obj.data = {};
 
         if (obj.name.length > 3 && obj.allowedUsers.length > 0) {
+            setStatus(true);
             await addDoc(documentRef, obj);
             let url = `${window.location.origin}/document/${obj.uid}`;
             window.location.href = url;
+            
 
 
         }
         else {
+            setStatus(false);
+            toast.info("Fill the details correctly ");
             console.log("false");
         }
 
@@ -127,11 +142,11 @@ const Dashboard = () => {
                                             {data?.name}
                                         </div>
                                     </div>
-                                    <div className='w-2/4 flex justify-end'>12/2/2020</div>
+                                    <div className='w-2/4 flex justify-end'>{data?.createdAt}</div>
                                 </div>
                             ))
                         ) : (
-                            <div className='flex font-bold text-4xl'>No Docs Found</div>
+                            <div className='flex font-bold text-2xl md:text-4xl'>No Docs Found. Try Creating One</div>
                         )
                     }
 
@@ -162,7 +177,7 @@ const Dashboard = () => {
                                 classNamePrefix="select"
                             />
                         </div>
-                        <button className='rounded-lg p-2 bg-blue-600 hover:bg-blue-500 mt-2' onClick={() => handleName(document.getElementById("name").value)}>
+                        <button disabled={status} className={`rounded-lg p-2 bg-blue-600 hover:bg-blue-500 mt-2 ${status?("cursor-not-allowed"):("cursor-pointer")}`} onClick={() => handleName(document.getElementById("name").value)}>
                             Create
                         </button>
                     </div>
